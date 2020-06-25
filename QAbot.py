@@ -114,34 +114,34 @@ def img_to_str(image_path):
     try:
         for i in range(result['words_result_num']):
             resultStr += result['words_result'][i]['words']
-            resultStr += '\n'
+            # resultStr += '\n'
         print(result)
     except:
         return ''
     return resultStr
-i = 22
-quesAns = img_to_str('{}/ans.png'.format(i)).split('\n')[:-1]
-print(quesAns)
-#%%
-i = 21
-img = cv2.imread('{}/screenshot.png'.format(i))
-cv2.imwrite("contours.png", img)
-image = get_file_content("contours.png")
-quesAns,result = img_to_str("contours.png")
-print(quesAns)
+# i = 22
+# quesAns = img_to_str('{}/ans.png'.format(i)).split('\n')[:-1]
+# print(quesAns)
+# #%%
+# i = 21
+# img = cv2.imread('{}/screenshot.png'.format(i))
+# cv2.imwrite("contours.png", img)
+# image = get_file_content("contours.png")
+# quesAns,result = img_to_str("contours.png")
+# print(quesAns)
 
-# %%
-n = result['words_result_num']
-ith = 0
-for i in range(n):
-    tmp = result['words_result'][i]['words']
-    if (u'第' in tmp) & (u'题' in tmp) & (u'共' in tmp):
-        print(tmp)
+# # %%
+# n = result['words_result_num']
+# ith = 0
+# for i in range(n):
+#     tmp = result['words_result'][i]['words']
+#     if (u'第' in tmp) & (u'题' in tmp) & (u'共' in tmp):
+#         print(tmp)
 
         
 
-# %%
-'第9题·共1题'.split('·')
+# # %%
+# '第9题·共1题'.split('·')
 
 
 # %%
@@ -178,40 +178,52 @@ def detect_ans(i):
         try:
             cv2.imwrite("{}/ans_{}.png".format(i,j), sub_img)
         except :
-            pass
+            return lib, j
         lib[j] = [(minx + maxx)/2, (miny + maxy)/2]
         j += 1
     return lib, j - 1
 
-lib = {}
 def check_lib(i):
     hashvalue = imagehash.phash(Image.open('{}/ques.png'.format(i)))
     text_quet = []
     correct_ans_idx = 0
     if hashvalue not in lib:
         ans, n_ans = detect_ans(i)
-        text_quet = img_to_str('{}/ques.png'.format(i)).split('\n')[:-1]
+        text_quet = img_to_str('{}/ques.png'.format(i))
+        text_quet = ''.join(text_quet)
         lib[hashvalue] = [i, text_quet, ans, n_ans, correct_ans_idx]
     return lib[hashvalue]
 
+
 def search_ans(i):
-    f = lib[i]
-    for f in filelist:
-        quesAns = img_to_str(f).split('\n')[:-1]
-   
+    value = check_lib(i)
+    if value[4] == 0:
+        ans = []
+        for j in range(1,value[3]+1):
+            baiduai = ''
+            try:
+                baiduai = img_to_str("{}/ans_{}.png".format(value[0],j)).split('\n')[0]
+            except:
+                pass
+            if baiduai == '':
+                baiduai = 'adjfioiajdsiofja;jefo;eno;jjn;ioajd;fja'
+            ans.append(baiduai)
 
-for i in range(1,23):
+        question = value[1]
+        # choices = ['甲醛', '苯', '甲醇']
+        choices = ans
+        correct_ans_idx =  run_algorithm(2, question, choices) +1
+        value[4] = correct_ans_idx
+        value.append(ans)
+    else:
+        return value
 
-    img = cv2.imread('{}/screenshot.png'.format(i))
-    img_part = crop_screecap(img)
-    save_crop(img_part, i)
-    check_lib(i)
     # hashvalue = hsh(img_part['ques'])
     
     # time.sleep(1)
 
 
-# %%
+
 
 import pickle
 
@@ -224,14 +236,7 @@ def load_dict(filename):
         return data
 
 
-# %%
-# for i in range(1,len(lib)+1):
-i = 23
-img = cv2.imread('{}/screenshot.png'.format(i))
-img_part = crop_screecap(img)
-save_crop(img_part, i)
 
-#%%
 
 def check_lib(i):
     hashvalue = imagehash.phash(Image.open('{}/ques.png'.format(i)))
@@ -239,18 +244,14 @@ def check_lib(i):
     correct_ans_idx = 0
     if hashvalue not in lib:
         ans, n_ans = detect_ans(i)
-        text_quet = img_to_str('{}/ques.png'.format(i)).split('\n')[:-1]
+        text_quet = img_to_str('{}/ques.png'.format(i))
         lib[hashvalue] = [i, text_quet, ans, n_ans, correct_ans_idx]
     return lib[hashvalue]
 
 
-def search_ans(i):
-    f = lib[i]
-    for f in filelist:
-        quesAns = img_to_str(f).split('\n')[:-1]
-        
 
-#%%
+
+
 
 import requests
 import webbrowser
@@ -288,7 +289,7 @@ def count_base(question,choices):
     flag = 1
     while flag:
     # headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.80 Safari/537.36'}
-        req = requests.get(url='http://www.baidu.com/s', params={'wd':question}, timeout=1)
+        req = requests.get(url='http://www.baidu.com/s', params={'wd':question}, timeout=10)
         content = req.text
         if 'class="timeout-feedback hide' not in content:
             flag = False
@@ -313,8 +314,8 @@ def output(choices, counts):
     
 
     if index_max == index_min:
-        print(Fore.RED + "高低计数相等此方法失效！" + Fore.RESET)
-        return
+        print(Fore.RED + "高低计数相等此方法失效！我猜1" + Fore.RESET)
+        return 1
 
     for i in range(len(choices)):
         print()
@@ -338,22 +339,22 @@ def run_algorithm(al_num, question, choices):
         idx = count_base(question, choices)
     return idx
 # %%
-i = 22
-value = check_lib(i)
-if value[4] == 0:
-    ans = []
-    for j, locations in value[2].items():
-        ans.append(img_to_str("{}/ans_{}.png".format(value[0],j)).split('\n')[0])
+   
 
-    question = ','.join(value[1])
-    # choices = ['甲醛', '苯', '甲醇']
-    choices = ans
-    correct_ans_idx =  run_algorithm(2, question, choices) +1
-    correct_ans_idx
-    
+lib = {}
+for i in range(1,23):
+
+    img = cv2.imread('{}/screenshot.png'.format(i))
+    img_part = crop_screecap(img)
+    save_crop(img_part, i)
+    search_ans(i)
+
 
 # %%
-
-correct_ans_idx
+i = 11
+img = cv2.imread('{}/screenshot.png'.format(i))
+img_part = crop_screecap(img)
+save_crop(img_part, i)
+search_ans(i)
 
 # %%
